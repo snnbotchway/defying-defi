@@ -15,6 +15,7 @@ contract UniswapV2 {
     IUniswapV2Factory public constant UniswapV2Factory =
         IUniswapV2Factory(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
     IWETH9 public WETH;
+    IERC20 public pair;
 
     event LiquidityAdded(uint amountA, uint amountB, uint liquidity);
 
@@ -34,6 +35,8 @@ contract UniswapV2 {
             address(this),
             block.timestamp
         );
+
+        pair = IERC20(UniswapV2Factory.getPair(address(WETH), address(DAI)));
     }
 
     /**
@@ -85,6 +88,26 @@ contract UniswapV2 {
         emit LiquidityAdded(amountA, amountB, liquidity);
     }
 
+    /**
+     * @dev Remove liquidity for DAI and WETH pair.
+     * @return amountA
+     * @return amountB
+     */
+    function removeLiquidity() external returns (uint amountA, uint amountB) {
+        uint256 liquidity = getLiquidityBalance();
+        require(pair.approve(address(UniswapV2Router02), liquidity), "approve failed pair");
+
+        (amountA, amountB) = UniswapV2Router02.removeLiquidity(
+            address(DAI),
+            address(WETH),
+            liquidity,
+            1,
+            1,
+            address(this),
+            block.timestamp
+        );
+    }
+
     function getWethBalance() public view returns (uint256) {
         return WETH.balanceOf(address(this));
     }
@@ -98,7 +121,6 @@ contract UniswapV2 {
     }
 
     function getLiquidityBalance() public view returns (uint256) {
-        IERC20 pair = IERC20(UniswapV2Factory.getPair(address(WETH), address(DAI)));
         return pair.balanceOf(address(this));
     }
 }

@@ -21,11 +21,15 @@ describe("UniswapV2", function () {
         const daiContract: IERC20 = await ethers.getContractAt("IERC20", await uniswapV2.DAI())
         const daiDecimals = await daiContract.decimals()
 
+        const pairContract: IERC20 = await ethers.getContractAt("IERC20", await uniswapV2.pair())
+        const pairDecimals = await pairContract.decimals()
+
         return {
             uniswapV2,
             wethContract,
             wethDecimals,
             daiDecimals,
+            pairDecimals,
             accounts,
             deployer,
             otherAccount,
@@ -66,7 +70,9 @@ describe("UniswapV2", function () {
 
     describe("addLiquidity", function () {
         it("adds liquidity", async () => {
-            const { uniswapV2, wethDecimals, daiDecimals } = await loadFixture(deployUniswapV2Fixture)
+            const { uniswapV2, wethDecimals, daiDecimals, pairDecimals } = await loadFixture(
+                deployUniswapV2Fixture
+            )
             const initialWethBal = await uniswapV2.getWETHBalance()
             const initialDaiBal = await uniswapV2.getDAIBalance()
             const initialLiquidityTokens = await uniswapV2.getLiquidityBalance()
@@ -76,12 +82,56 @@ describe("UniswapV2", function () {
             const finalLiquidityTokens = await uniswapV2.getLiquidityBalance()
             const finalWethBal = await uniswapV2.getWETHBalance()
             const finalDaiBal = await uniswapV2.getDAIBalance()
+            expect(finalWethBal).to.be.lessThan(initialWethBal)
+            expect(finalDaiBal).to.be.lessThan(initialDaiBal)
+            expect(finalLiquidityTokens).to.be.greaterThan(initialLiquidityTokens)
+
             console.log("Initial WETH balance:", ethers.utils.formatUnits(initialWethBal, wethDecimals))
             console.log("Final WETH balance:", ethers.utils.formatUnits(finalWethBal, wethDecimals))
             console.log("Initial DAI balance:", ethers.utils.formatUnits(initialDaiBal, daiDecimals))
             console.log("Final DAI balance:", ethers.utils.formatUnits(finalDaiBal, daiDecimals))
-            console.log("Initial liquidity tokens:", ethers.utils.formatUnits(initialLiquidityTokens, 18))
-            console.log("Final liquidity tokens:", ethers.utils.formatUnits(finalLiquidityTokens, 18))
+            console.log(
+                "Initial liquidity tokens:",
+                ethers.utils.formatUnits(initialLiquidityTokens, pairDecimals)
+            )
+            console.log(
+                "Final liquidity tokens:",
+                ethers.utils.formatUnits(finalLiquidityTokens, pairDecimals)
+            )
+        })
+    })
+
+    describe("removeLiquidity", function () {
+        it("removes liquidity", async () => {
+            const { uniswapV2, wethDecimals, daiDecimals, pairDecimals } = await loadFixture(
+                deployUniswapV2Fixture
+            )
+            await uniswapV2.addLiquidity()
+            const initialWethBal = await uniswapV2.getWETHBalance()
+            const initialDaiBal = await uniswapV2.getDAIBalance()
+            const initialLiquidityTokens = await uniswapV2.getLiquidityBalance()
+
+            await uniswapV2.removeLiquidity()
+
+            const finalLiquidityTokens = await uniswapV2.getLiquidityBalance()
+            const finalWethBal = await uniswapV2.getWETHBalance()
+            const finalDaiBal = await uniswapV2.getDAIBalance()
+            expect(finalWethBal).to.be.greaterThan(initialWethBal)
+            expect(finalDaiBal).to.be.greaterThan(initialDaiBal)
+            expect(finalLiquidityTokens).to.be.lessThan(initialLiquidityTokens)
+
+            console.log("Initial WETH balance:", ethers.utils.formatUnits(initialWethBal, wethDecimals))
+            console.log("Final WETH balance:", ethers.utils.formatUnits(finalWethBal, wethDecimals))
+            console.log("Initial DAI balance:", ethers.utils.formatUnits(initialDaiBal, daiDecimals))
+            console.log("Final DAI balance:", ethers.utils.formatUnits(finalDaiBal, daiDecimals))
+            console.log(
+                "Initial liquidity tokens:",
+                ethers.utils.formatUnits(initialLiquidityTokens, pairDecimals)
+            )
+            console.log(
+                "Final liquidity tokens:",
+                ethers.utils.formatUnits(finalLiquidityTokens, pairDecimals)
+            )
         })
     })
 })
