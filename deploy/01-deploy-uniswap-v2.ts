@@ -12,7 +12,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments }: HardhatRu
         from: deployer,
         log: true,
         args: [],
-        value: ethers.utils.parseEther("3"),
+        value: ethers.utils.parseEther("5"),
     })
     log("=====================================================================")
 }

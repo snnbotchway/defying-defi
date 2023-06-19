@@ -4,6 +4,7 @@ import { deployments, ethers } from "hardhat"
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 
 import { IWETH9, UniswapV2 } from "../../typechain"
+import { IERC20 } from "../../typechain/@uniswap/v2-periphery/contracts/interfaces/"
 
 describe("UniswapV2", function () {
     const deployUniswapV2Fixture = async () => {
@@ -14,8 +15,17 @@ describe("UniswapV2", function () {
 
         const uniswapV2: UniswapV2 = await ethers.getContract("UniswapV2", deployer)
 
+        const wethContract: IWETH9 = await ethers.getContractAt("IWETH9", await uniswapV2.WETH())
+        const wethDecimals = await wethContract.decimals()
+
+        const daiContract: IERC20 = await ethers.getContractAt("IERC20", await uniswapV2.DAI())
+        const daiDecimals = await daiContract.decimals()
+
         return {
             uniswapV2,
+            wethContract,
+            wethDecimals,
+            daiDecimals,
             accounts,
             deployer,
             otherAccount,
@@ -23,31 +33,55 @@ describe("UniswapV2", function () {
     }
 
     describe("Deployment", function () {
-        it("deposits 2 ETH for 2 WETH", async () => {
-            const { uniswapV2 } = await loadFixture(deployUniswapV2Fixture)
-            const wethBalance = await uniswapV2.getWethBalance()
+        it("Gets some WETH and DAI", async () => {
+            const { uniswapV2, daiDecimals, wethDecimals } = await loadFixture(deployUniswapV2Fixture)
+            const wethBalance = ethers.utils.formatUnits(await uniswapV2.getWethBalance(), wethDecimals)
+            const daiBalance = ethers.utils.formatUnits(await uniswapV2.getDAIBalance(), daiDecimals)
 
-            expect(wethBalance).to.equal(ethers.utils.parseEther("2"))
+            expect(Number(daiBalance)).to.equal(1000)
+            expect(Number(wethBalance)).to.equal(2)
+            console.log("WETH Balance:", wethBalance)
+            console.log("DAI Balance:", daiBalance)
         })
     })
 
-    describe("swapEthForUSDT", function () {
-        it("swaps 1 WETH for some USDT", async () => {
-            const { uniswapV2 } = await loadFixture(deployUniswapV2Fixture)
+    describe("swapEthForDAI", function () {
+        it("swaps 1 WETH for some DAI", async () => {
+            const { uniswapV2, wethContract, daiDecimals } = await loadFixture(deployUniswapV2Fixture)
             const initialWethBal = await uniswapV2.getWethBalance()
-            const initialUsdtBal = await uniswapV2.getUSDTBalance()
-            console.log("Initial USDT balance:", ethers.utils.formatUnits(initialUsdtBal, 6))
-            const wethContract: IWETH9 = await ethers.getContractAt("IWETH9", await uniswapV2.WETH())
+            const initialDaiBal = await uniswapV2.getDAIBalance()
+            console.log("Initial DAI balance:", ethers.utils.formatUnits(initialDaiBal, daiDecimals))
             const oneEther = ethers.utils.parseEther("1")
             await wethContract.approve(uniswapV2.address, oneEther)
 
-            await uniswapV2.swapEthForUSDT()
+            await uniswapV2.swapEthForDAI()
 
             const finalWethBal = await uniswapV2.getWethBalance()
-            const finalUsdtBal = await uniswapV2.getUSDTBalance()
-            console.log("Final USDT balance:", ethers.utils.formatUnits(finalUsdtBal, 6))
+            const finalDaiBal = await uniswapV2.getDAIBalance()
+            console.log("Final DAI balance:", ethers.utils.formatUnits(finalDaiBal, daiDecimals))
             expect(initialWethBal.sub(oneEther)).to.equal(finalWethBal)
-            expect(finalUsdtBal).to.greaterThan(initialUsdtBal)
+            expect(finalDaiBal).to.greaterThan(initialDaiBal)
+        })
+    })
+
+    describe("addLiquidity", function () {
+        it("adds liquidity", async () => {
+            const { uniswapV2, wethDecimals, daiDecimals } = await loadFixture(deployUniswapV2Fixture)
+            const initialWethBal = await uniswapV2.getWETHBalance()
+            const initialDaiBal = await uniswapV2.getDAIBalance()
+            const initialLiquidityTokens = await uniswapV2.getLiquidityBalance()
+
+            await expect(uniswapV2.addLiquidity()).to.emit(uniswapV2, "LiquidityAdded")
+
+            const finalLiquidityTokens = await uniswapV2.getLiquidityBalance()
+            const finalWethBal = await uniswapV2.getWETHBalance()
+            const finalDaiBal = await uniswapV2.getDAIBalance()
+            console.log("Initial WETH balance:", ethers.utils.formatUnits(initialWethBal, wethDecimals))
+            console.log("Final WETH balance:", ethers.utils.formatUnits(finalWethBal, wethDecimals))
+            console.log("Initial DAI balance:", ethers.utils.formatUnits(initialDaiBal, daiDecimals))
+            console.log("Final DAI balance:", ethers.utils.formatUnits(finalDaiBal, daiDecimals))
+            console.log("Initial liquidity tokens:", ethers.utils.formatUnits(initialLiquidityTokens, 18))
+            console.log("Final liquidity tokens:", ethers.utils.formatUnits(finalLiquidityTokens, 18))
         })
     })
 })
