@@ -3,8 +3,8 @@ import { deployments, ethers } from "hardhat"
 
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 
-import { IWETH9, UniswapV2 } from "../../typechain"
-import { IERC20 } from "../../typechain/@uniswap/v2-periphery/contracts/interfaces/"
+import { IWETH9, UniswapV2 } from "../typechain"
+import { IERC20 } from "../typechain/@uniswap/v2-periphery/contracts/interfaces/"
 
 describe("UniswapV2", function () {
     const deployUniswapV2Fixture = async () => {
